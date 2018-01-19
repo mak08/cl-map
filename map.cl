@@ -1,9 +1,49 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-15 21:51:19>
+;;; Last Modified <michael 2018-01-18 19:40:26>
 
 (in-package :cl-map)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Lat&Lng
+;; TODO: A latlng should only be used to represent Google Maps coordinates.
+
+(defstruct latlng
+  (lat 0 :read-only t)
+  (lng 0 :read-only t)
+  latr%
+  lngr%)
+
+(defmethod print-object ((thing latlng) stream)
+  (format stream "[~3$, ~3$]" (latlng-lat thing) (latlng-lng thing)))
+
+(defun latlng-latr (latlng)
+  (or (latlng-latr% latlng)
+      (setf (latlng-latr% latlng)
+            (rad (latlng-lat latlng)))))
+
+(defun latlng-lngr (latlng)
+  (or (latlng-lngr% latlng)
+      (setf (latlng-lngr% latlng)
+            (rad (latlng-lng latlng)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Conversion
+
+(defun rad (x)
+  (declare (double-float x))
+  (* (* 2d0 pi) (/ x 360d0)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Converting GRIB U/V values to DEG
+
+(defun angle (u v)
+  (declare (double-float u v))
+  (let ((angle
+         (+ 180d0 (* 180d0 (/ (atan u v) pi)))))
+    angle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Map file and dataset
