@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2018-01-18 19:39:40>
+;;; Last Modified <michael 2018-10-28 15:02:39>
 
 (defpackage "CL-MAP"
   (:use "COMMON-LISP" "CFFI")
@@ -19,7 +19,9 @@
            "*MAP-FILE*"
            "ENSURE-MAP"
            "IS-LAND"
-           "INTERSECTS-LAND-P"))
+           "INTERSECTS-LAND-P"
+           "LINE-INTERSECTS-LAND-P"
+           "RECTANGLE-INTERSECTS-LAND-P"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

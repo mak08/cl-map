@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-18 19:40:26>
+;;; Last Modified <michael 2018-10-28 19:43:41>
 
 (in-package :cl-map)
 
@@ -28,7 +28,6 @@
       (setf (latlng-lngr% latlng)
             (rad (latlng-lng latlng)))))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Conversion
 
@@ -39,10 +38,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Converting GRIB U/V values to DEG
 
+(defconstant 180/pi (/ 180d0 pi))
+
 (defun angle (u v)
   (declare (double-float u v))
   (let ((angle
-         (+ 180d0 (* 180d0 (/ (atan u v) pi)))))
+         (+ 180d0 (* 180/pi (atan u v)))))
     angle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,7 +114,7 @@
 (let ((segment (ogr-g-create-geometry wkbLineString)))
   (ogr-g-add-point-2d segment 0d0 0d0)
   (ogr-g-add-point-2d segment 0d0 0d0)
-  (defun intersects-land-p (start end)
+  (defun line-intersects-land-p (start end)
     (bordeaux-threads:with-lock-held (+map-lock+)
       (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
       (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
@@ -128,7 +129,7 @@
                     (found (ogr-g-intersects polygon segment)))
                (ogr-f-destroy feature)
                (when found
-                 (return-from intersects-land-p t)))))))
+                 (return-from line-intersects-land-p t)))))))
 
 ;;; Same as above, but without scanning the result.
 ;;; In practive this looked correct but is only slightly faster.
@@ -143,6 +144,72 @@
       (ogr-l-reset-reading *map*)
       (let ((feature (ogr-l-get-next-feature *map*)))
         (not (null-pointer-p feature))))))
+
+(defun rectangle-intersects-land-p (nw se)
+  (let ((segment (ogr-g-create-geometry wkbLinearRing))
+        (poly (ogr-g-create-geometry wkbPolygon)))
+    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat nw))
+    (ogr-g-add-point-2d segment (latlng-lng se) (latlng-lat nw))
+    (ogr-g-add-point-2d segment (latlng-lng se) (latlng-lat se))
+    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat se))
+    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat nw))
+    (ogr-g-add-geometry poly segment)
+    (bordeaux-threads:with-lock-held (+map-lock+)
+      
+      (ogr-l-set-spatial-filter *map* poly)
+      (ogr-l-reset-reading *map*)
+      ;; setSpatialFilter may return too many features. Scanning the result may be necessary.
+      ;; See http://www.gdal.org/ogr__api_8h.html#a678d1735bc82533614ac005691d1138c
+      (loop
+         :for feature = (ogr-l-get-next-feature *map*)
+         :while (not (null-pointer-p feature))
+         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                    (found (ogr-g-intersects polygon poly)))
+               (ogr-f-destroy feature)
+               (when found
+                 (return-from rectangle-intersects-land-p t)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Fast land detection
+
+(defun intersects-land-p (start end)
+  ;; Check if the line from $start to $end intersects land.
+  ;; This implementation assumes that $start and $end are on the same tile.
+  (when
+      ;; When there is any land in the tile containing point...
+      (tile-intersects-land-p end)
+    ;; ... look closer.
+    (line-intersects-land-p start end)))
+
+(defconstant +tile-width+ 0.2d0)
+(defconstant +tile-num+ 5)
+
+(defvar *tile-array* (make-array (list (* 360 +tile-num+)
+                                       (* 180 +tile-num+))
+                                 :initial-element :unknown))
+
+(defparameter *miss* 0)
+(defparameter *hit* 0)
+
+(defun tile-intersects-land-p (latlng)
+  (let* ((north (floor (latlng-lat latlng) +tile-width+))
+         (west (floor (latlng-lng latlng) +tile-width+))
+         (i-north (if (< north 0) (+ north 180) north))
+         (i-west (if (< west 0) (+ west 360) west)))
+    (let ((land-p (aref *tile-array* i-north i-west)))
+      (cond ((eq land-p :unknown)
+             (incf *miss*)
+             (let* ((south (ceiling (latlng-lat latlng) +tile-width+))
+                    (east (ceiling (latlng-lng latlng) +tile-width+))
+                    (nw (make-latlng :lat (* north +tile-width+)
+                                     :lng (* west +tile-width+)))
+                    (se (make-latlng :lat (* south +tile-width+)
+                                     :lng (* east +tile-width+)))
+                    (land-p (rectangle-intersects-land-p nw se)))
+               (setf (aref *tile-array* i-north i-west) land-p)))
+            (t
+             (incf *hit*)
+             land-p)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialize map on load -

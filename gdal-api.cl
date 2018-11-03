@@ -1,12 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-15 23:20:02>
+;;; Last Modified <michael 2018-10-28 11:37:07>
 
 (in-package :cl-map)
 
 (defvar wkbPoint 1)
 (defvar wkbLineString 2)
+(defvar wkbPolygon 3)
+(defvar wkbLinearRing 101)
 (defvar GDAL_OF_VECTOR 4)
 (defvar OLCFastSpatialFilter "FastSpatialFilter")
 
@@ -86,6 +88,10 @@
   (geom :pointer)
   (lon :double)
   (lat :double))
+
+(defcfun ("OGR_G_AddGeometry" ogr-g-add-geometry) :int
+  (geom :pointer)
+  (newsubgeom :pointer))
 
 (defcfun ("OGR_G_SetPoint_2D" ogr-g-set-point-2d) :void
   (geom :pointer)
