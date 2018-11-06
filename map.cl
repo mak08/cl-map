@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-10-28 19:43:41>
+;;; Last Modified <michael 2018-11-06 21:49:14>
 
 (in-package :cl-map)
 
@@ -192,10 +192,12 @@
 (defparameter *hit* 0)
 
 (defun tile-intersects-land-p (latlng)
-  (let* ((north (floor (latlng-lat latlng) +tile-width+))
+  (let* ((maxnorth (array-dimension *tile-array* 0)) 
+         (maxwest (array-dimension *tile-array* 1))
+         (north (floor (latlng-lat latlng) +tile-width+))
          (west (floor (latlng-lng latlng) +tile-width+))
-         (i-north (if (< north 0) (+ north 180) north))
-         (i-west (if (< west 0) (+ west 360) west)))
+         (i-north (if (< north 0) (+ north maxnorth) north))
+         (i-west (if (< west 0) (+ west maxwest) west)))
     (let ((land-p (aref *tile-array* i-north i-west)))
       (cond ((eq land-p :unknown)
              (incf *miss*)
