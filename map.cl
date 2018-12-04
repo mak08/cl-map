@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-25 23:25:33>
+;;; Last Modified <michael 2018-12-04 00:52:19>
 
 (in-package :cl-map)
 
@@ -260,8 +260,8 @@
 (defconstant +tile-width+ 0.2d0)
 (defconstant +tile-num+ 5)
 
-(defvar *tile-array* (make-array (list (* 360 +tile-num+)
-                                       (* 180 +tile-num+))
+(defvar *tile-array* (make-array (list (* 180 +tile-num+)
+                                       (* 360 +tile-num+))
                                  :initial-element :unknown))
 
 (defparameter *miss* 0)
