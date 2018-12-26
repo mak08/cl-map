@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-04 00:52:19>
+;;; Last Modified <michael 2018-12-23 13:10:47>
 
 (in-package :cl-map)
 
@@ -19,11 +19,11 @@
   (multiple-value-bind (d r1)
       (truncate dec)
     (multiple-value-bind (m r2)
-        (truncate (* r1 60))
-      (make-dms :degrees d :minutes m :seconds (* r2 60)))))
+        (truncate (* r1 60d0))
+      (make-dms :degrees d :minutes m :seconds (* r2 60d0)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Read and print coordinates in the fixed format ddd°mm'ss".
+;;; Read and print coordinates in the fixed format dddÂ°mm'ss".
 ;;; Reading fails (and probably produces strange errors) if the coordinate
 ;;; is not in this format.
 
@@ -35,8 +35,8 @@
 
 (defun read-dms (stream)
   (flet ((decode (c0 c1 c2)
-           (+ (* (- (char-code c0) 48) 100)
-              (* (- (char-code c1) 48) 10)
+           (+ (* (- (char-code c0) 48) 100d0)
+              (* (- (char-code c1) 48) 10d0)
               (- (char-code c2) 48))))
     (let ((chars
            (loop :for k :below 10 :collect (read-char stream t nil nil))))
@@ -49,10 +49,41 @@
 ;; TODO: A latlng should only be used to represent Google Maps coordinates.
 
 (defstruct latlng
-  (lat 0 :read-only t)
-  (lng 0 :read-only t)
+  (lat% nil)
+  (lng% nil)
   (latr% 0d0 :type double-float)
   (lngr% 0d0 :type double-float))
+
+
+(defun latlng-lat (latlng)
+  (or (latlng-lat% latlng)
+      (setf (latlng-lat% latlng)
+            (deg (latlng-latr latlng)))))
+
+(defun latlng-lng (latlng)
+  (or (latlng-lng% latlng)
+      (setf (latlng-lng% latlng)
+            (deg (latlng-lngr latlng)))))
+
+(declaim (inline latlng-lng latlng-lngr))
+
+(defun latlng-latr (latlng)
+  (declare (inline rad))
+  (cond ((eql (latlng-latr% latlng) 0d0)
+         (setf (latlng-latr% latlng)
+               (rad (latlng-lat latlng))))
+        (t
+         (latlng-latr% latlng))))
+
+(defun latlng-lngr (latlng)
+  (declare (inline rad))
+  (cond ((eql (latlng-lngr% latlng) 0d0)
+         (setf (latlng-lngr% latlng)
+               (rad (latlng-lng latlng))))
+        (t
+         (latlng-lngr% latlng))))
+(declaim (notinline latlng-latr latlng-lngr))
+
 
 (defmethod print-object ((thing latlng) stream)
   (let ((lat-value
@@ -79,28 +110,12 @@
         (close-bracket (read-char stream)))
     (let ((lat-sign (ecase lat-marker (#\N 1) (#\S -1)))
           (lng-sign (ecase lng-marker (#\E 1) (#\W -1))))
-      (make-latlng :lat (* lat-sign (dms2decimal latitude))
-                   :lng (* lng-sign (dms2decimal longitude))))))
+      (make-latlng :lat% (* lat-sign (dms2decimal latitude))
+                   :lng% (* lng-sign (dms2decimal longitude))))))
 
-
-(defun latlng-latr (latlng)
-  (declare (inline rad))
-  (cond ((eql (latlng-latr% latlng) 0d0)
-         (setf (latlng-latr% latlng)
-               (rad (latlng-lat latlng))))
-        (t
-         (latlng-latr% latlng))))
-
-(defun latlng-lngr (latlng)
-  (declare (inline rad))
-  (cond ((eql (latlng-lngr% latlng) 0d0)
-         (setf (latlng-lngr% latlng)
-               (rad (latlng-lng latlng))))
-        (t
-         (latlng-lngr% latlng))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Conversion
+;;; Trigonometric units Conversion
 
 (declaim (inline rad))
 (defun rad (x)
@@ -108,11 +123,16 @@
   (* (* 2d0 pi) (/ x 360d0)))
 (declaim (notinline rad))
 
+(declaim (inline deg))
+(defun deg (x)
+  (declare (double-float x))
+  (* 360 (/ x (* 2 pi))))
+(declaim (notinline deg))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Converting GRIB U/V values to DEG
 
 (defconstant 180/pi (/ 180d0 pi))
-
 
 (declaim (inline angle))
 (defun angle (u v)
@@ -279,10 +299,10 @@
              (incf *miss*)
              (let* ((south (ceiling (latlng-lat latlng) +tile-width+))
                     (east (ceiling (latlng-lng latlng) +tile-width+))
-                    (nw (make-latlng :lat (* north +tile-width+)
-                                     :lng (* west +tile-width+)))
-                    (se (make-latlng :lat (* south +tile-width+)
-                                     :lng (* east +tile-width+)))
+                    (nw (make-latlng :lat% (* north +tile-width+)
+                                     :lng% (* west +tile-width+)))
+                    (se (make-latlng :lat% (* south +tile-width+)
+                                     :lng% (* east +tile-width+)))
                     (land-p (rectangle-intersects-land-p nw se)))
                (setf (aref *tile-array* i-north i-west) land-p)))
             (t

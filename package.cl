@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2018-10-28 15:02:39>
+;;; Last Modified <michael 2018-12-22 01:53:37>
 
 (defpackage "CL-MAP"
   (:use "COMMON-LISP" "CFFI")
@@ -12,7 +12,8 @@
            "LATLNG-LNGR"
            "LATLNG-LAT"
            "LATLNG-LNG"
-           
+
+           "DEG"
            "RAD"
            "ANGLE"
            
