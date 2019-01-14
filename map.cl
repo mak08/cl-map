@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-28 11:58:01>
+;;; Last Modified <michael 2019-01-10 23:53:32>
 
 (in-package :cl-map)
 
@@ -162,10 +162,10 @@
              (incf *miss*)
              (let* ((south (ceiling (latlng-lat latlng) +tile-width+))
                     (east (ceiling (latlng-lng latlng) +tile-width+))
-                    (nw (make-latlng :lat% (* north +tile-width+)
-                                     :lng% (* west +tile-width+)))
-                    (se (make-latlng :lat% (* south +tile-width+)
-                                     :lng% (* east +tile-width+)))
+                    (nw (make-latlng :latr% (rad (* north +tile-width+))
+                                     :lngr% (rad (* west +tile-width+))))
+                    (se (make-latlng :latr% (rad (* south +tile-width+))
+                                     :lngr% (rad (* east +tile-width+))))
                     (land-p (rectangle-intersects-land-p nw se)))
                (setf (aref *tile-array* i-north i-west) land-p)))
             (t
