@@ -20,5 +20,6 @@ cl-map provides bindings to a very small subset of libgdal, useful for testing i
   
 ## Known issues
 
-* If libgdal was installed as a package, exchanging libsqlite3 may cause libgdal.so to fail to load. In my case, using SBCL,
-  the shared object loader complained that `sqlite3_table_column_name` could not be found in libgdal.
+* If libgdal was installed as a package, installing a new libsqlite3 version may cause libgdal.so to fail to load. 
+  In my case, using SBCL, the shared object loader complained that `sqlite3_table_column_name` could not be found 
+  in libgdal.
