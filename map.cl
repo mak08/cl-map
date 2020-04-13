@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-01-10 23:53:32>
+;;; Last Modified <michael 2020-04-13 22:00:36>
 
 (in-package :cl-map)
 
@@ -88,7 +88,49 @@
                     (found (ogr-g-intersects polygon segment)))
                (ogr-f-destroy feature)
                (when found
-                 (return-from line-intersects-land-p t)))))))
+                 (return-from line-intersects-land-p
+                   (values t))))))))
+
+(let ((segment (ogr-g-create-geometry wkbLineString)))
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (defun line-land-intersection (start end)
+    ;; Check if and where a line intersects land. The start point should be on
+    ;; sea.
+    ;; The result geometry is a LINESTRING if the line (start, end) enters
+    ;; land one time, or a MULTILINESTRING if the line enters and leaves land
+    ;; multiple times.
+    ;; The first point of the (first) linestring is the point where the line
+    ;; hits land for the first time.
+    (bordeaux-threads:with-lock-held (+map-lock+)
+      (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
+      (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
+      (ogr-l-set-spatial-filter *map* segment)
+      (ogr-l-reset-reading *map*)
+      (loop
+         :for feature = (ogr-l-get-next-feature *map*)
+         :while (not (null-pointer-p feature))
+         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                    (intersects (ogr-g-intersects segment polygon)))
+               (when intersects
+                 (let*  ((intersection (ogr-g-intersection segment polygon))
+                         (name (ogr-g-get-geometry-name intersection)))
+                   (when (string= name "MULTILINESTRING")
+                     ;; Use the first linestring in case of a multilinestring
+                     (setf intersection (ogr-g-get-geometry-ref intersection 0)))
+                   (let ((count (ogr-g-get-point-count intersection)))
+                     (assert (>= count 1)))
+                   (ogr-f-destroy feature)
+                   (return-from line-land-intersection
+                     (with-foreign-objects
+                       ((lat :double)
+                        (lon :double)
+                        (z :double))
+                       ;; Return the first point of the intersection
+                       (ogr-g-get-point intersection 0 lon lat z)
+                       (values t
+                               (make-latlng :lng (mem-ref lon :double)
+                                            :lat (mem-ref lat :double))))))))))))
 
 ;;; Same as above, but without scanning the result.
 ;;; In practive this looked correct but is only slightly faster.
@@ -140,23 +182,24 @@
     ;; ... look closer.
     (line-intersects-land-p start end)))
 
-(defconstant +tile-width+ 0.2d0)
-(defconstant +tile-num+ 5)
+;; Tiling used to speed up land check.
+;; The smaller the tiles, the bigger the probability to skip over land!
+(defconstant +tile-width+ 0.1d0)
+(defconstant +tile-num+ 10)
+(defconstant +maxnorth+ (* 180 +tile-num+))
+(defconstant +maxwest+ (* 360 +tile-num+))
 
-(defvar *tile-array* (make-array (list (* 180 +tile-num+)
-                                       (* 360 +tile-num+))
-                                 :initial-element :unknown))
+(defparameter *tile-array* (make-array (list +maxnorth+ +maxwest+)
+                                       :initial-element :unknown))
 
 (defparameter *miss* 0)
 (defparameter *hit* 0)
 
 (defun tile-intersects-land-p (latlng)
-  (let* ((maxnorth (array-dimension *tile-array* 0)) 
-         (maxwest (array-dimension *tile-array* 1))
-         (north (floor (latlng-lat latlng) +tile-width+))
+  (let* ((north (floor (latlng-lat latlng) +tile-width+))
          (west (floor (latlng-lng latlng) +tile-width+))
-         (i-north (if (< north 0) (+ north maxnorth) north))
-         (i-west (if (< west 0) (+ west maxwest) west)))
+         (i-north (if (< north 0) (+ north +maxnorth+) north))
+         (i-west (if (< west 0) (+ west +maxwest+) west)))
     (let ((land-p (aref *tile-array* i-north i-west)))
       (cond ((eq land-p :unknown)
              (incf *miss*)

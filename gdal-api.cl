@@ -1,9 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-10-28 11:37:07>
+;;; Last Modified <michael 2020-04-13 18:58:29>
 
 (in-package :cl-map)
+
+(declaim (optimize (speed 3) (debug 1)  (space 1) (safety 1)))
 
 (defvar wkbPoint 1)
 (defvar wkbLineString 2)
@@ -76,11 +78,18 @@
 (defcfun ("OGR_G_GetGeometryType" ogr-g-get-geometry-type) :pointer
   (geom :pointer))
 
-(defcfun ("OGR_G_Contains"  OGR-G-Contains) :int
+(defcfun ("OGR_G_GetGeometryName" ogr-g-get-geometry-name) :string
+  (geom :pointer))
+
+(defcfun ("OGR_G_Contains"  OGR-G-Contains) :boolean
   (container :pointer)
   (geom :pointer))
 
-(defcfun ("OGR_G_Intersects"  ogr-g-intersects) :int
+(defcfun ("OGR_G_Intersects"  ogr-g-intersects) :boolean
+  (this-geom :pointer)
+  (other-geom :pointer))
+
+(defcfun ("OGR_G_Intersection"  ogr-g-intersection) :pointer
   (this-geom :pointer)
   (other-geom :pointer))
 
@@ -99,7 +108,30 @@
   (lon :double)
   (lat :double))
 
+(defcfun ("OGR_G_GetPoint" ogr-g-get-point) :void
+  (geom :pointer)
+  (index :int)
+  (lon :pointer)
+  (lat :pointer)
+  (z :pointer))
 
+(defcfun ("OGR_G_GetPointCount" ogr-g-get-point-count) :int
+  (geom :pointer))
+
+
+(defcfun ("OGR_G_ForceToLineString" ogr-g-force-to-line-string) :pointer
+  (geom :pointer))
+
+(defcfun ("OGR_G_GetGeometryCount" ogr-g-get-geometry-count) :int
+  (geom :pointer))
+
+(defcfun ("OGR_G_GetGeometryRef" ogr-g-get-geometry-ref) :pointer
+  (geom :pointer)
+  (index :int))
+
+(defcfun ("OGR_G_ExportToWkt" ogr-g-export-to-wkt) :pointer
+  (geom :pointer)
+  (result :string))
 
 
 ;;; Geometry type

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2018-12-28 11:59:34>
+;;; Last Modified <michael 2020-04-12 18:59:05>
 
 (defpackage "CL-MAP"
   (:use "COMMON-LISP" "CFFI" "CL-GEOMATH")
@@ -10,6 +10,7 @@
            "IS-LAND"
            "INTERSECTS-LAND-P"
            "LINE-INTERSECTS-LAND-P"
+           "LINE-LAND-INTERSECTION"
            "RECTANGLE-INTERSECTS-LAND-P"))
 
 ;;; EOF
