@@ -1,11 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-04-13 18:58:29>
+;;; Last Modified <michael 2021-04-22 00:43:01>
 
 (in-package :cl-map)
-
-(declaim (optimize (speed 3) (debug 1)  (space 1) (safety 1)))
 
 (defvar wkbPoint 1)
 (defvar wkbLineString 2)
@@ -75,6 +73,9 @@
 (defcfun ("OGR_G_CreateGeometry" ogr-g-create-geometry) :pointer
   (type :uint))
 
+(defcfun ("OGR_G_DestroyGeometry"  ogr-g-destroy-geometry) :void
+  (geom :pointer))
+
 (defcfun ("OGR_G_GetGeometryType" ogr-g-get-geometry-type) :pointer
   (geom :pointer))
 
@@ -99,6 +100,10 @@
   (lat :double))
 
 (defcfun ("OGR_G_AddGeometry" ogr-g-add-geometry) :int
+  (geom :pointer)
+  (newsubgeom :pointer))
+
+(defcfun ("OGR_G_AddGeometryDirectly" ogr-g-add-geometry-directly) :int
   (geom :pointer)
   (newsubgeom :pointer))
 

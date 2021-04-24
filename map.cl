@@ -1,12 +1,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-04-18 00:09:15>
+;;; Last Modified <michael 2021-04-24 21:06:08>
 
 (in-package :cl-map)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Map file and dataset
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; !! Coordinate ranges !!
+;; GDAL:
+;;    Lat: N = 90, S = -90
+;;    Lng: W = -180, ZeroM = 0, E = 180
+;; Tilings:
+;;    Lat: N = 0, S = 180
+;;    Lng: ZeroM = 0/360, increasing eastward
 
 ;; Vector map describing Land areas. It must contain a layer "Land_Polygons".
 ;; It must have an accompanying index file land_polygons.shx."
