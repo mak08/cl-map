@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-24 21:06:08>
+;;; Last Modified <michael 2021-05-14 18:06:14>
 
 (in-package :cl-map)
 
@@ -107,14 +107,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; RECTANGLE-INTERSECTS-LAND-P
 
-(defun rectangle-intersects-land-p (nw se)
+(defun rectangle-intersects-land-p (lat-nw lng-nw lat-se lng-se)
   (let ((segment (ogr-g-create-geometry wkbLinearRing))
         (poly (ogr-g-create-geometry wkbPolygon)))
-    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat nw))
-    (ogr-g-add-point-2d segment (latlng-lng se) (latlng-lat nw))
-    (ogr-g-add-point-2d segment (latlng-lng se) (latlng-lat se))
-    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat se))
-    (ogr-g-add-point-2d segment (latlng-lng nw) (latlng-lat nw))
+    (ogr-g-add-point-2d segment lng-nw lat-nw)
+    (ogr-g-add-point-2d segment lng-se lat-nw)
+    (ogr-g-add-point-2d segment lng-se lat-se)
+    (ogr-g-add-point-2d segment lng-nw lat-se)
+    (ogr-g-add-point-2d segment lng-nw lat-nw)
     (ogr-g-add-geometry poly segment)
     (bordeaux-threads:with-lock-held (+map-lock+)
       
@@ -203,7 +203,7 @@
 ;;; Fast land detection
 
 (defun point-on-land-p (point)
-  (when (tile-intersects-land-p point)
+  (when (tile-intersects-land-p (latlng-lat point) (latlng-lng point))
     (is-land point)))
 
 (defun intersects-land-p (start end)
@@ -211,7 +211,7 @@
   ;; This implementation assumes that $start and $end are on the same tile.
   (when
       ;; When there is any land in the tile containing point...
-      (tile-intersects-land-p end)
+      (tile-intersects-land-p (latlng-lat end) (latlng-lng end))
     ;; ... look closer.
     (line-intersects-land-p start end)))
 
@@ -228,21 +228,20 @@
 (defparameter *miss* 0)
 (defparameter *hit* 0)
 
-(defun tile-intersects-land-p (latlng)
-  (let* ((north (floor (latlng-lat latlng) +tile-width+))
-         (west (floor (latlng-lng latlng) +tile-width+))
+(defun tile-intersects-land-p (lat lng)
+  (let* ((north (floor lat +tile-width+))
+         (west (floor lng +tile-width+))
          (i-north (if (< north 0) (+ north +maxnorth+) north))
          (i-west (if (< west 0) (+ west +maxwest+) west)))
     (let ((land-p (aref *tile-array* i-north i-west)))
       (cond ((eq land-p :unknown)
              (incf *miss*)
-             (let* ((south (ceiling (latlng-lat latlng) +tile-width+))
-                    (east (ceiling (latlng-lng latlng) +tile-width+))
-                    (nw (make-latlng :latr% (rad (* north +tile-width+))
-                                     :lngr% (rad (* west +tile-width+))))
-                    (se (make-latlng :latr% (rad (* south +tile-width+))
-                                     :lngr% (rad (* east +tile-width+))))
-                    (land-p (rectangle-intersects-land-p nw se)))
+             (let* ((south (ceiling lat +tile-width+))
+                    (east (ceiling lng +tile-width+))
+                    (land-p (rectangle-intersects-land-p (* north +tile-width+)
+                                                         (* west +tile-width+)
+                                                         (* south +tile-width+)
+                                                         (* east +tile-width+))))
                (setf (aref *tile-array* i-north i-west) land-p)))
             (t
              (incf *hit*)

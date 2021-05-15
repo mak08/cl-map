@@ -1,11 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2021-04-23 16:47:24>
+;;; Last Modified <michael 2021-05-14 22:59:25>
 
 (in-package :cl-map)
-
-(setf (log2:log-destination "cl-map") "cl-map.log")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Creating bitmaps
@@ -109,7 +107,7 @@
              (loop
                :for lon :from -180d0 :to (- 180d0 dlon) :by dlon
                :do  (when
-                        (test-rectangle lat lon  (+ lat dlat) (+ lon dlon))
+                        (and (test-rectangle lat lon  (+ lat dlat) (+ lon dlon)))
                       (let ((lat-index (truncate (+ lat 90) dlat))
                             (lon-index (truncate (+ lon 180) dlon)))
                         (setf (aref result lat-index lon-index) 1))))))
