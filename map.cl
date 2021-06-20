@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-14 18:06:14>
+;;; Last Modified <michael 2021-06-20 17:45:14>
 
 (in-package :cl-map)
 
@@ -63,8 +63,8 @@
 ;; IS-LAND
 ;;  Return TRUE iff point is on land
 
-(let ((ogr-point (ogr-g-create-geometry wkbPoint)))
-  (defun is-land (point)
+(defun is-land (point)
+  (let ((ogr-point (ogr-g-create-geometry wkbPoint)))
     (let ((lat (latlng-lat point))
           (lon (latlng-lng point)))
       (bordeaux-threads:with-lock-held (+map-lock+)
@@ -83,10 +83,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; LINE-INTERSECTS-LAND-P
 
-(let ((segment (ogr-g-create-geometry wkbLineString)))
-  (ogr-g-add-point-2d segment 0d0 0d0)
-  (ogr-g-add-point-2d segment 0d0 0d0)
-  (defun line-intersects-land-p (start end)
+(defun line-intersects-land-p (start end)
+  (let ((segment (ogr-g-create-geometry wkbLineString)))
+    (ogr-g-add-point-2d segment 0d0 0d0)
+    (ogr-g-add-point-2d segment 0d0 0d0)
     (bordeaux-threads:with-lock-held (+map-lock+)
       (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
       (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
@@ -134,10 +134,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Intersection point
 
-(let ((segment (ogr-g-create-geometry wkbLineString)))
-  (ogr-g-add-point-2d segment 0d0 0d0)
-  (ogr-g-add-point-2d segment 0d0 0d0)
-  (defun line-land-intersection (start end)
+(defun line-land-intersection (start end)
+  (let ((segment (ogr-g-create-geometry wkbLineString)))
+    (ogr-g-add-point-2d segment 0d0 0d0)
+    (ogr-g-add-point-2d segment 0d0 0d0)
     ;; Check if and where a line intersects land. The start point should be on
     ;; sea.
     ;; The result geometry is a LINESTRING if the line (start, end) enters
