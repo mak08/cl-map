@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-23 22:10:32>
+;;; Last Modified <michael 2022-01-25 00:50:53>
 
 (in-package :cl-map)
 
@@ -239,10 +239,10 @@
 
 ;; Tiling used to speed up land check.
 ;; The smaller the tiles, the bigger the probability to skip over land!
-(defconstant +tile-width+ 0.1d0)
-(defconstant +tile-num+ 10)
-(defconstant +maxnorth+ (* 180 +tile-num+))
-(defconstant +maxwest+ (* 360 +tile-num+))
+(defvar +tile-width+ 0.1d0)
+(defvar +tile-num+ 10)
+(defvar +maxnorth+ (* 180 +tile-num+))
+(defvar +maxwest+ (* 360 +tile-num+))
 
 (defparameter *tile-array* (make-array (list +maxnorth+ +maxwest+)
                                        :initial-element :unknown))

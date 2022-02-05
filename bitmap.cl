@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2022-01-23 13:14:17>
+;;; Last Modified <michael 2022-02-02 22:40:51>
 
 (in-package :cl-map)
 
@@ -20,6 +20,7 @@
   (values t))
 
 
+(declaim (inline check-bitmap))
 (defun-t bm-is-land t ((latlng latlng))
   (check-bitmap *bitmap* latlng))
 
@@ -38,7 +39,7 @@
 
 (declaim (inline check-bitmap))
 (defun check-bitmap (bitmap latlng)
-  "nil ==> land, T ==> no land"
+  "T ==> land, nil ==> no land"
   (let ((lat-index (truncate (+ (latlng-lat latlng) 90d0)
                              (bitmap-dlat% bitmap)))
         (lon-index (truncate (+ (latlng-lng latlng) 180d0)
@@ -146,13 +147,27 @@
           :do (progn
                 (log2:info "Lat: ~,2,,f" tlat)
                 (loop :for tlon :from -180d0 :to (- 180d0 tile-size) :by tile-size
-                    :do (probe-map-tile bitmap :dlat dlat
-                                               :dlon dlon
-                                               :lat-north (+ tlat tile-size)
-                                               :lat-south tlat
-                                               :lon-east (+ tlon tile-size)
-                                               :lon-west tlon))))
+                      :for north = (+ tlat tile-size)
+                      :for west  = tlon
+                      :for south = tlat
+                      :for east  = (+ tlon tile-size)
+                      :do (cond
+                            ((land-tile-p north west south east)
+                             (fill-map-tile bitmap :dlat dlat
+                                                    :dlon dlon
+                                                    :lat-north north
+                                                    :lat-south south
+                                                    :lon-east east
+                                                    :lon-west west))
+                            (t
+                             (probe-map-tile bitmap :dlat dlat
+                                                    :dlon dlon
+                                                    :lat-north north
+                                                    :lat-south south
+                                                    :lon-east east
+                                                    :lon-west west))))))
     (write-bitmap-file bitmap filename)))
+
 
 (defun probe-map-tile (map &key
                              (dlat 1d0)
@@ -172,6 +187,21 @@
                      (let ((lat-index (truncate (+ lat 90d0) dlat))
                            (lon-index (truncate (+ lon 180d0) dlon)))
                        (setf (aref map lat-index lon-index) 1)))))))
+  (values t))
+
+(defun fill-map-tile (map &key
+                             (dlat 1d0)
+                             (dlon dlat)
+                             (lat-north 90d0) (lat-south -90d0)
+                             (lon-west -180d0) (lon-east 180d0))
+  (log2:trace "dlat=~a dlon=~a" dlat dlon)
+  (loop
+    :for lat :from (- lat-north dlat) :downto lat-south :by dlat
+    :do(loop
+         :for lon :from (- lon-east dlon) :downto lon-west :by dlon
+         :do  (let ((lat-index (truncate (+ lat 90d0) dlat))
+                    (lon-index (truncate (+ lon 180d0) dlon)))
+                (setf (aref map lat-index lon-index) 1))))
   (values t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

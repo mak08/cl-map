@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-04-23 00:15:57>
+;;; Last Modified <michael 2022-01-31 23:39:36>
 
 (defsystem "cl-map"
   :description "Vector map queries using GDAL/OGR"
@@ -12,7 +12,9 @@
                (:file "libraries")
                (:file "gdal-api")
                (:file "map")
-               (:file "bitmap")))
+               (:file "vecmap")
+               (:file "bitmap")
+               (:file "test")))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
