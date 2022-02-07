@@ -1,0 +1,256 @@
+{
+    "waypointsRoute": [
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 61.64816245852389,
+                "longitude": -44.384765625
+            },
+            "bearing": 296,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 62.65396335371416,
+                "longitude": -49.13085937500001
+            },
+            "bearing": 2,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 70.19999407534664,
+                "longitude": -48.51562500000001
+            },
+            "bearing": 339,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 76.00547035565367,
+                "longitude": -57.78808593750001
+            },
+            "bearing": 301,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 76.76054111175671,
+                "longitude": -63.72070312500001
+            },
+            "bearing": 250,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 76.53729617099738,
+                "longitude": -66.18164062500001
+            },
+            "bearing": 329,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 76.9999351181161,
+                "longitude": -67.41210937500001
+            },
+            "bearing": 76,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 77.11803181203176,
+                "longitude": -65.03906250000001
+            },
+            "bearing": 5,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 77.97074497652062,
+                "longitude": -64.68750000000001
+            },
+            "bearing": 276,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 78.02557363284087,
+                "longitude": -68.90625000000001
+            },
+            "bearing": 23,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 78.69910592550542,
+                "longitude": -67.41210937500001
+            },
+            "bearing": 43,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 79.5446087817067,
+                "longitude": -62.84179687500001
+            },
+            "bearing": 22,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 81.1203884020757,
+                "longitude": -58.62304687500001
+            },
+            "bearing": 88,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 81.0932138526084,
+                "longitude": -51.416015625
+            },
+            "bearing": 78,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 81.2550322990594,
+                "longitude": -43.68164062500001
+            },
+            "bearing": 34,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 81.8487556310786,
+                "longitude": -40.78125000000001
+            },
+            "bearing": 116,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 81.39644333265674,
+                "longitude": -35.1950273292783
+            },
+            "bearing": 116,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 80.92870564626632,
+                "longitude": -29.663850261598377
+            },
+            "bearing": 151,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 80.13161522512445,
+                "longitude": -27.115779927049186
+            },
+            "bearing": 143,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 79.24206401632281,
+                "longitude": -23.63548873839664
+            },
+            "bearing": 175,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 76.96033358827414,
+                "longitude": -22.719726562500004
+            },
+            "bearing": 191,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 74.89081560691193,
+                "longitude": -24.213867187500004
+            },
+            "bearing": 234,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 73.87371654457475,
+                "longitude": -29.003906250000004
+            },
+            "bearing": 189,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 69.83962194067463,
+                "longitude": -30.849609375000004
+            },
+            "bearing": 230,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 68.68852060180143,
+                "longitude": -34.54101562500001
+            },
+            "bearing": 231,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 66.51326044311188,
+                "longitude": -40.86914062500001
+            },
+            "bearing": 197,
+            "sail": "auto"
+        },
+        {
+            "wp": {
+                "__type": "GeoPoint",
+                "latitude": 62.2679226294176,
+                "longitude": -43.68164062500001
+            },
+            "bearing": 197,
+            "sail": "auto"
+        }
+    ],
+    "bitSailorRoute": [],
+    "scheduledWaypoints": [],
+    "pointsChart": [],
+    "_method": "PUT",
+    "_ApplicationId": "JFvkachvtsjN4f1glZ1ZHiGrchnkyeFtY9gNWbN4",
+    "_JavaScriptKey": "e4QehnvfIIA1nrH0wc35onJkMq3fZA09uMNad0Ct",
+    "_ClientVersion": "js2.19.0",
+    "_InstallationId": "db9db329-807d-4986-a291-86cda72bd126",
+    "_SessionToken": "r:8914842f3fb2e68b26c0dcd088781da8"
+}
