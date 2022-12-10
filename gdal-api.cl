@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-22 00:43:01>
+;;; Last Modified <michael 2022-12-10 00:23:05>
 
 (in-package :cl-map)
 
@@ -9,13 +9,17 @@
 (defvar wkbLineString 2)
 (defvar wkbPolygon 3)
 (defvar wkbLinearRing 101)
-(defvar GDAL_OF_VECTOR 4)
+(defvar GDAL_OF_VECTOR #x04)
 (defvar OLCFastSpatialFilter "FastSpatialFilter")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialization & Files
 
 (defcfun ("GDALAllRegister" gdal-all-register) :void)
+
+(defcfun ("GDALOpen" gdal-open) :pointer
+  (filename :string)
+  (open-flags :uint))
 
 (defcfun ("GDALOpenEx" gdal-open-ex) :pointer
   (filename :string)
@@ -121,6 +125,12 @@
   (z :pointer))
 
 (defcfun ("OGR_G_GetPointCount" ogr-g-get-point-count) :int
+  (geom :pointer))
+
+(defcfun ("OGR_G_GetX" ogr-g-point-get-x) :double
+  (geom :pointer))
+
+(defcfun ("OGR_G_GetY" ogr-g-point-get-y) :double
   (geom :pointer))
 
 
