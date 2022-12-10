@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-25 00:50:53>
+;;; Last Modified <michael 2022-12-10 14:18:59>
 
 (in-package :cl-map)
 
@@ -47,21 +47,23 @@
     (bordeaux-threads:with-lock-held (+map-lock+)
       (log2:info "Loading shapefile ~a" filename)
       (gdal-all-register)
-      (let* ((ds (gdal-open-ex filename
-                               4
-                               (cffi:null-pointer)
-                               (cffi:null-pointer)
-                               (cffi:null-pointer)))
-             (layer-count (gdal-dataset-get-layer-count ds))
-             (land-polygons (gdal-dataset-get-layer ds 0)))
-        (unless (eql layer-count 1)
-          (error "Unexpected layer count ~a" layer-count))
-        (cond
-          ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
-           ;; Succeed only if we have an index
-           (setf *map* (make-mapp :data land-polygons :land-inverted inverted)))
-          (t
-           (error "Layer not found or no index")))))))
+      (let ((ds (gdal-open-ex filename
+                              GDAL_OF_VECTOR
+                              (cffi:null-pointer)
+                              (cffi:null-pointer)
+                              (cffi:null-pointer))))
+        (when (null-pointer-p ds)
+          (error "Failed to open ~a" filename))
+        (let* ((layer-count (gdal-dataset-get-layer-count ds))
+               (land-polygons (gdal-dataset-get-layer ds 0)))
+          (unless (eql layer-count 1)
+            (error "Unexpected layer count ~a" layer-count))
+          (cond
+            ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
+             ;; Succeed only if we have an index
+             (setf *map* (make-mapp :data land-polygons :land-inverted inverted)))
+            (t
+             (error "Layer not found or no index"))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IS-LAND
@@ -197,25 +199,27 @@
                                     min-lat lat
                                     min-lng lng))))))))
         (loop
-           :for feature = (ogr-l-get-next-feature mapdata)
-           :while (not (null-pointer-p feature))
-           :do (let* ((polygon (ogr-f-get-geometry-ref feature))
-                      (intersects (ogr-g-intersects segment polygon)))
-                 (when intersects
-                   (let*  ((geometry (ogr-g-intersection segment polygon))
-                           (geometry-name (ogr-g-get-geometry-name geometry)))
-                     (cond
-                       ((string= geometry-name "MULTILINESTRING")
-                        (let ((count (ogr-g-get-geometry-count geometry)))
-                          (loop
-                            :for k :below count
-                            :do (nearest-point-linestring (ogr-g-get-geometry-ref geometry k)))))
-                       ((string= geometry-name "LINESTRING")
-                        (nearest-point-linestring geometry))
-                       (T
-                        (error "Unexpected geometry ~a" geometry-name)))
-                     (ogr-f-destroy geometry)))
-                 (ogr-f-destroy feature)))
+          :for feature = (ogr-l-get-next-feature mapdata)
+          :while (not (null-pointer-p feature))
+          :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                     (intersects (ogr-g-intersects segment polygon)))
+                (when intersects
+                  (let*  ((geometry (ogr-g-intersection segment polygon))
+                          (geometry-name (ogr-g-get-geometry-name geometry)))
+                    (cond
+                      ((string= geometry-name "MULTILINESTRING")
+                       (let ((count (ogr-g-get-geometry-count geometry)))
+                         (loop
+                           :for k :below count
+                           :do (nearest-point-linestring (ogr-g-get-geometry-ref geometry k)))))
+                      ((or (string= geometry-name "LINESTRING")
+                           (string= geometry-name "POINT")
+                           (string= geometry-name "MULTIPOINT"))
+                       (nearest-point-linestring geometry))
+                      (T
+                       (error "Unexpected geometry ~a" geometry-name)))
+                    (ogr-f-destroy geometry)))
+                (ogr-f-destroy feature)))
         (when min-lat
           (values t
                   (make-latlng :lat  min-lat :lng min-lng)))))))
