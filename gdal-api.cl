@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-12-10 00:23:05>
+;;; Last Modified <michael 2022-12-11 17:34:05>
 
 (in-package :cl-map)
 
@@ -48,6 +48,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Layer
 
+(defcfun ("OGR_L_GetName" ogr-l-get-name) :string
+  (layer :pointer))
+
 (defcfun ("OGR_L_SetSpatialFilter" ogr-l-set-spatial-filter) :void
   (layer :pointer)
   (geom :pointer))
@@ -62,6 +65,9 @@
 (defcfun ("OGR_L_GetNextFeature" ogr-l-get-next-feature) :pointer
   (layer :pointer))
 
+(defcfun ("OGR_L_GetFeatureCount" ogr-l-get-feature-count) :int
+  (layer :pointer))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Feature
 
@@ -73,6 +79,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Geometry
+
+(defcfun ("OGR_G_IsValid" ogr-g-is-valid) :boolean
+  (geom :pointer))
 
 (defcfun ("OGR_G_CreateGeometry" ogr-g-create-geometry) :pointer
   (type :uint))
