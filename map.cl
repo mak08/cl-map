@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-12-10 14:18:59>
+;;; Last Modified <michael 2022-12-11 21:29:51>
 
 (in-package :cl-map)
 
@@ -61,6 +61,9 @@
           (cond
             ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
              ;; Succeed only if we have an index
+             (log2:info "Loaded layer ~a with ~a features"
+                        (ogr-l-get-name land-polygons)
+                        (ogr-l-get-feature-count land-polygons))
              (setf *map* (make-mapp :data land-polygons :land-inverted inverted)))
             (t
              (error "Layer not found or no index"))))))))
@@ -197,28 +200,47 @@
                               (log2:debug "NEAREST: ~,4f,~,4f for ~,4f,~,4f" lat lng lat0 lng0)
                               (setf min-dist dist
                                     min-lat lat
-                                    min-lng lng))))))))
+                                    min-lng lng)))))))
+             (nearest-point-multipoint (multipoint)
+               (loop
+                 :for k :from 0
+                 :for geom = (ogr-g-get-geometry-ref multipoint k)
+                 :while (not (null-pointer-p geom))
+                 :do (progn
+                       (ogr-g-get-point geom 0 ogr-lon ogr-lat ogr-z)
+                       (setf lat (mem-ref ogr-lat :double))
+                       (setf lng (mem-ref ogr-lon :double))
+                       (let ((dist (+ (expt (- lat0 lat) 2)
+                                      (expt (- lng0 lng) 2))))
+                         (when (or (null min-dist)
+                                   (< dist min-dist))
+                           (log2:debug "NEAREST: ~,4f,~,4f for ~,4f,~,4f" lat lng lat0 lng0)
+                           (setf min-dist dist
+                                 min-lat lat
+                                 min-lng lng)))))))
         (loop
           :for feature = (ogr-l-get-next-feature mapdata)
           :while (not (null-pointer-p feature))
           :do (let* ((polygon (ogr-f-get-geometry-ref feature))
                      (intersects (ogr-g-intersects segment polygon)))
                 (when intersects
-                  (let*  ((geometry (ogr-g-intersection segment polygon))
-                          (geometry-name (ogr-g-get-geometry-name geometry)))
+                  (let*  ((intersection (ogr-g-intersection segment polygon))
+                          (count  (ogr-g-get-point-count intersection))
+                          (intersection-name (ogr-g-get-geometry-name intersection)))
                     (cond
-                      ((string= geometry-name "MULTILINESTRING")
-                       (let ((count (ogr-g-get-geometry-count geometry)))
+                      ((string= intersection-name "MULTILINESTRING")
+                       (let ((count (ogr-g-get-geometry-count intersection)))
                          (loop
                            :for k :below count
-                           :do (nearest-point-linestring (ogr-g-get-geometry-ref geometry k)))))
-                      ((or (string= geometry-name "LINESTRING")
-                           (string= geometry-name "POINT")
-                           (string= geometry-name "MULTIPOINT"))
-                       (nearest-point-linestring geometry))
+                           :do (nearest-point-linestring (ogr-g-get-geometry-ref intersection k)))))
+                      ((or (string= intersection-name "LINESTRING")
+                           (string= intersection-name "POINT"))
+                       (nearest-point-linestring intersection))
+                      ((string= intersection-name "MULTIPOINT")
+                       (nearest-point-multipoint intersection))
                       (T
-                       (error "Unexpected geometry ~a" geometry-name)))
-                    (ogr-f-destroy geometry)))
+                       (error "Unexpected geometry ~a" intersection-name)))
+                    (ogr-f-destroy intersection)))
                 (ogr-f-destroy feature)))
         (when min-lat
           (values t
