@@ -1,19 +1,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2022-02-02 22:40:51>
+;;; Last Modified <michael 2022-07-17 17:41:21>
 
 (in-package :cl-map)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Creating bitmaps
 
-(defvar *bitmap-file* "/home/michael/Maps/5400x10800.dat")
+(defparameter *bitmap-file* "/home/michael/Maps/bm-tiled-5400.dat")
 (defvar *bitmap* nil)
 (defvar *bitmap-latpoints* 5400)
 (defvar *bitmap-lonpoints* 10800)
 
 (defun ensure-bitmap ()
+  (log2:info "Loading ~ax~a bitmap ~a"  *bitmap-latpoints* *bitmap-lonpoints* *bitmap-file*)
   (setf *bitmap* (read-bitmap-file *bitmap-file*
                                    *bitmap-latpoints*
                                    *bitmap-lonpoints*))
