@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2022-07-17 17:41:21>
+;;; Last Modified <michael 2023-05-07 12:40:24>
 
 (in-package :cl-map)
 
@@ -155,11 +155,11 @@
                       :do (cond
                             ((land-tile-p north west south east)
                              (fill-map-tile bitmap :dlat dlat
-                                                    :dlon dlon
-                                                    :lat-north north
-                                                    :lat-south south
-                                                    :lon-east east
-                                                    :lon-west west))
+                                                   :dlon dlon
+                                                   :lat-north north
+                                                   :lat-south south
+                                                   :lon-east east
+                                                   :lon-west west))
                             (t
                              (probe-map-tile bitmap :dlat dlat
                                                     :dlon dlon
@@ -198,11 +198,11 @@
   (log2:trace "dlat=~a dlon=~a" dlat dlon)
   (loop
     :for lat :from (- lat-north dlat) :downto lat-south :by dlat
-    :do(loop
-         :for lon :from (- lon-east dlon) :downto lon-west :by dlon
-         :do  (let ((lat-index (truncate (+ lat 90d0) dlat))
-                    (lon-index (truncate (+ lon 180d0) dlon)))
-                (setf (aref map lat-index lon-index) 1))))
+    :do (loop
+          :for lon :from (- lon-east dlon) :downto lon-west :by dlon
+          :do  (let ((lat-index (truncate (+ lat 90d0) dlat))
+                     (lon-index (truncate (+ lon 180d0) dlon)))
+                 (setf (aref map lat-index lon-index) 1))))
   (values t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
