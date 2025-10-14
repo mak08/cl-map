@@ -1,19 +1,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2022
-;;; Last Modified <michael 2022-02-01 00:30:45>
+;;; Last Modified <michael 2025-10-12 23:15:46>
 
 (in-package :cl-map)
 
 (defstruct vecmap name n s w e poly)
 
-(defun land-tile-p (north west south east)
+(defun land-tile-p (north east south west)
   "Determine if 1° tile with given NW corner is entirely contained in one of the polygons of *vecmaps*"
-  (some (lambda (p)
-          (tile-inside-polygon-p north west south east p))
-        *vecmaps*))
+  (find-if (lambda (p)
+             (tile-inside-polygon-p north west south east p))
+           *vecmaps*))
 
-(defun tile-inside-polygon-p (north west south east vecmap)
+
+(defun tile-inside-polygon-p (north east south west vecmap)
   (when
       ;; tile is inside enclosing rectangle
       (and
