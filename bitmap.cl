@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2023-05-07 12:40:24>
+;;; Last Modified <michael 2025-10-12 23:19:46>
 
 (in-package :cl-map)
 
@@ -15,9 +15,7 @@
 
 (defun ensure-bitmap ()
   (log2:info "Loading ~ax~a bitmap ~a"  *bitmap-latpoints* *bitmap-lonpoints* *bitmap-file*)
-  (setf *bitmap* (read-bitmap-file *bitmap-file*
-                                   *bitmap-latpoints*
-                                   *bitmap-lonpoints*))
+  (setf *bitmap* (read-bitmap-file *bitmap-file*))
   (values t))
 
 
@@ -46,11 +44,12 @@
         (lon-index (truncate (+ (latlng-lng latlng) 180d0)
                              (bitmap-dlon% bitmap))))
     (eql 1
-         (aref (bitmap-data bitmap) lat-index lon-index))))
+         (aref (bitmap-polygons bitmap) lat-index lon-index))))
 
+(declaim (inline test-rectangle))
 (defun test-rectangle (lat-nw lng-nw lat-se lng-se)
   (declare (double-float lat-nw lng-nw lat-se lng-se))
-  (let ((vectormap (mapp-data *map*))
+  (let ((vectormap (mapp-polygons *map*))
         (segment (ogr-g-create-geometry wkbLinearRing))
         (poly (ogr-g-create-geometry wkbPolygon)))
     (ogr-g-add-point-2d segment lng-nw lat-nw)
@@ -83,148 +82,121 @@
                      :direction :output
                      :if-does-not-exist :create
                      :if-exists :supersede
-                     :element-type 'bit)
-    (loop
-      :for k :below (array-total-size bitmap)
-      :do (write-byte (row-major-aref bitmap k)
-                      f))
-    (log2:info "Wrote ~a" (truename f))))
-
-(defun read-bitmap-file (filename x y)
-  (let ((bitmap (make-array (list x y) :element-type 'bit)))
-    (with-open-file (f filename
-                       :direction :input
-                       :element-type 'bit)
+                     :element-type '(unsigned-byte 8))
+    (destructuring-bind (n-lat n-lon)
+        (array-dimensions bitmap)
+      (assert (zerop (mod n-lat 8)))
+      (assert (zerop (mod n-lon 8)))
+      (log2:info "Writing lat points: ~a, lon points: ~a" n-lat n-lon)
+      (write-u16 f n-lat)
+      (write-u16 f n-lon)
       (loop
-        :for k :below (array-total-size bitmap)
-        :do (setf  (row-major-aref bitmap k)
-                   (read-byte f))))
-    (make-bitmap bitmap)))
+        :for n :below (/ (array-total-size bitmap) 8)
+        :do (let ((b 0))
+              (dotimes (k 8)
+                (setf b
+                      (dpb (row-major-aref bitmap (+ (* n 8) k)) (byte 1 k) b)))
+              (write-byte b f)))
+      (log2:info "Wrote ~a" (truename f)))))
+  
+(defun read-bitmap-file (filename)
+  (log2:info "Reading ~a" (pathname filename))
+  (with-open-file (f filename
+                       :direction :input
+                       :element-type '(unsigned-byte 8))
+    (let* ((n-lat (read-u16 f))
+           (n-lon (read-u16 f))
+           (bitmap (make-array (list n-lat n-lon) :element-type 'bit)))
+      (log2:info "Reading lat points: ~a, lon points: ~a" n-lat n-lon)
+      (loop
+        :for n :below (/ (* n-lat n-lon) 8)
+        :do (let ((b (read-byte f nil nil)))
+              (when (null b)
+                (log2:info "--> ~a" n))
+              (dotimes (k 8)
+                (setf (row-major-aref bitmap (+ (* n 8) k))
+                      (ldb (byte 1 k) b)))))
+      (values bitmap))))
+
+(defun write-u16 (f b)
+  (write-byte (ldb (byte 8 0) b) f)
+  (write-byte (ldb (byte 8 8) b) f)
+  (values))
+
+(defun read-u16 (f)
+  (let ((b 0))
+    (setf b (dpb (read-byte f nil nil) (byte 8 0) b))
+    (setf b (dpb (read-byte f nil nil) (byte 8 8) b))
+    b))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Generate Bitmap
+;;; Generate tile
 
-(defun generate-bitmap (filename &key
-                                   (latpoints 180)
-                                   (lonpoints 360)
-                                   (lat-north 90d0)
-                                   (lat-south -90d0))
-  (log2:warning "Using ~a" *map-file*)
-  (let ((bitmap (probe-map latpoints lonpoints :lat-north lat-north :lat-south lat-south)))
-    (write-bitmap-file bitmap filename)))
+(defun probe-tile (&key
+                     (latpoints 180)
+                     (lonpoints 360)
+                     (lat-north 90d0) (lat-south -90d0)
+                     (lon-west -180d0) (lon-east 180d0))
 
-(defun probe-map (latpoints lonpoints &key (lat-north 90d0) (lat-south -90d0))
-  (declare ((signed-byte 64) latpoints lonpoints)
-           (double-float lat-north lat-south))
   (let ((dlat (/ (- lat-north lat-south) latpoints))
-        (dlon (/ 360d0 lonpoints))
-        (result (make-array (list latpoints lonpoints) :element-type 'bit)))
-    (loop
-      :for lat :of-type double-float :downfrom (- lat-north dlat) :to lat-south :by dlat
-      :do  (progn
-             (log2:info "Lat: ~,2,,f" lat)
-             (loop
-               :for lon :of-type double-float :from -180d0 :to (- 180d0 dlon) :by dlon
-               :do  (when
-                        (test-rectangle lat lon  (+ lat dlat) (+ lon dlon))
-                      (let ((lat-index (truncate (+ lat 90) dlat))
-                            (lon-index (truncate (+ lon 180) dlon)))
-                        (setf (aref result lat-index lon-index) 1))))))
-    (values result)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Generate Bitmap Tiled (single file)
-
-(defun generate-bitmap-tiled  (filename  &key
-                                           (latpoints 180)
-                                           (lonpoints 360)
-                                           (lat-north 90d0)
-                                           (lat-south -90d0)
-                                           (tile-size 1d0))
-  (let ((dlat (/ (- lat-north lat-south) latpoints))
-        (dlon (/ 360d0 lonpoints))
+        (dlon (/ (- lon-east lon-west) lonpoints))
         (bitmap (make-array (list latpoints lonpoints) :element-type 'bit)))
-    (loop :for tlat :from -90d0 :to (- 90d0 tile-size) :by tile-size
-          :do (progn
-                (log2:info "Lat: ~,2,,f" tlat)
-                (loop :for tlon :from -180d0 :to (- 180d0 tile-size) :by tile-size
-                      :for north = (+ tlat tile-size)
-                      :for west  = tlon
-                      :for south = tlat
-                      :for east  = (+ tlon tile-size)
-                      :do (cond
-                            ((land-tile-p north west south east)
-                             (fill-map-tile bitmap :dlat dlat
-                                                   :dlon dlon
-                                                   :lat-north north
-                                                   :lat-south south
-                                                   :lon-east east
-                                                   :lon-west west))
-                            (t
-                             (probe-map-tile bitmap :dlat dlat
-                                                    :dlon dlon
-                                                    :lat-north north
-                                                    :lat-south south
-                                                    :lon-east east
-                                                    :lon-west west))))))
-    (write-bitmap-file bitmap filename)))
+    (log2:info "Probing ~a ~a ~a ~a" lat-north lat-south lon-west lon-east)
 
-
-(defun probe-map-tile (map &key
-                             (dlat 1d0)
-                             (dlon dlat)
-                             (lat-north 90d0) (lat-south -90d0)
-                             (lon-west -180d0) (lon-east 180d0))
-  (log2:trace "dlat=~a dlon=~a" dlat dlon)
-  (when
-      (test-rectangle lat-north lon-west lat-south lon-east)
-    (loop
-      :for lat :from (- lat-north dlat) :downto lat-south :by dlat
-      :do (progn
-            (loop
-              :for lon :from (- lon-east dlon) :downto lon-west :by dlon
-              :do  (when
-                       (test-rectangle lat lon  (+ lat dlat) (+ lon dlon))
-                     (let ((lat-index (truncate (+ lat 90d0) dlat))
-                           (lon-index (truncate (+ lon 180d0) dlon)))
-                       (setf (aref map lat-index lon-index) 1)))))))
-  (values t))
-
-(defun fill-map-tile (map &key
-                             (dlat 1d0)
-                             (dlon dlat)
-                             (lat-north 90d0) (lat-south -90d0)
-                             (lon-west -180d0) (lon-east 180d0))
-  (log2:trace "dlat=~a dlon=~a" dlat dlon)
-  (loop
-    :for lat :from (- lat-north dlat) :downto lat-south :by dlat
-    :do (loop
-          :for lon :from (- lon-east dlon) :downto lon-west :by dlon
-          :do  (let ((lat-index (truncate (+ lat 90d0) dlat))
-                     (lon-index (truncate (+ lon 180d0) dlon)))
-                 (setf (aref map lat-index lon-index) 1))))
-  (values t))
+    ;; (log2:trace "dlat=~a dlon=~a" dlat dlon)
+    ;; (loop
+    ;;   :for lat :from (- lat-north dlat) :downto lat-south :by dlat
+    ;;   :for lat-index :from 0
+    ;;   :do (loop
+    ;;         :for lon :from (- lon-east dlon) :downto lon-west :by dlon
+    ;;         :for lon-index :from 0
+    ;;         :do  (when
+    ;;                  (test-rectangle lat lon  (+ lat dlat) (+ lon dlon))
+    ;;                (setf (aref bitmap lat-index lon-index) 1))))
+    (values bitmap)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Generate tile files
 
-(defun generate-bitmap-tile (filename &key
-                                        (latpoints 360)
-                                        (lonpoints 360)
-                                        (lat-north 90d0) (lat-south -90d0)
-                                        (lon-west -180d0) (lon-east 180d0))
-  (let ((dlat (/ (- lat-north lat-south) latpoints))
-        (dlon (/ (- lon-east lon-west) lonpoints))
-        (bitmap (make-array (list latpoints lonpoints) :element-type 'bit)))
-    (log2:info "dlat=~a dlon=~a" dlat dlon)
-    (probe-map-tile bitmap :dlat dlat
-                           :dlon dlon 
-                           :lat-north lat-north
-                           :lat-south lat-south
-                           :lon-west lon-west
-                           :lon-east lon-east)
-    (write-bitmap-file bitmap filename)))
-  
+(defun generate-tiles (&key (height 1) (width 1) (resolution 120))
+  (let* ((directory (format nil "~a_~a_~a" height width resolution))
+         (latpoints (* height resolution))
+         (lonpoints (* width resolution))
+         (lat-north 90d0)
+         (lat-south -90d0)
+         (lon-west -180d0)
+         (lon-east 180d0))
+    (ensure-directories-exist (format nil "~a/" directory))
+    (log2:info "Writing ~a*~a tiles" (/ 180 height) (/ 360 width))
+    (loop
+      :for lat :from lat-north :downto lat-south :by height
+      :for lat1 = (- lat height)
+      :do (loop
+            :for lon :from lon-east :downto lon-west :by width
+            :for lon1 = (- lon width)
+            :do (cond
+                  ((null (test-rectangle lat lon lat1 lon1))
+                   (write-water-tile lat lon lat1 lon1))
+                  ((land-tile-p  lat lon lat1 lon1)
+                   (write-land-tile lat lon lat1 lon1))
+                  (t
+                   (let ((tile (probe-tile :latpoints latpoints
+                                           :lonpoints lonpoints
+                                           :lat-north lat
+                                           :lat-south lat1
+                                           :lon-east lon
+                                           :lon-west lon1)))
+                     (write-bitmap-file tile (tile-path directory lat lon)))))))))
+
+(defun tile-path (directory north east)
+  (make-pathname :directory `(:relative ,directory) :name (format nil "~f_~f" north east) :type "dat"))
+
+(defun write-land-tile (lat0 lon0 lat1 lon1)
+  (let ((land-tile (land-tile-p  lat0 lon0 lat1 lon1)))
+    (log2:info "Land tile: ~a ~a ~a ~a ==> ~a" lat0 lon0 lat1 lon1 (vecmap-name land-tile))))
+
+(defun write-water-tile (lat0 lon0 lat1 lon1)
+  (log2:info "Water tile: ~a ~a ~a ~a" lat0 lon0 lat1 lon1))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

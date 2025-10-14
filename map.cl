@@ -1,14 +1,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-12-11 21:29:51>
+;;; Last Modified <michael 2025-10-11 23:00:39>
 
 (in-package :cl-map)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Map 
 
-(defstruct mapp data land-inverted)
+(defstruct mapp
+  polygons
+  filename
+  (land-inverted nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; !! Coordinate ranges !!
@@ -44,38 +47,46 @@
 
 (defun ensure-map (&key (filename *map-file*) (inverted nil))
   (unless *map*
-    (bordeaux-threads:with-lock-held (+map-lock+)
-      (log2:info "Loading shapefile ~a" filename)
-      (gdal-all-register)
-      (let ((ds (gdal-open-ex filename
-                              GDAL_OF_VECTOR
-                              (cffi:null-pointer)
-                              (cffi:null-pointer)
-                              (cffi:null-pointer))))
-        (when (null-pointer-p ds)
-          (error "Failed to open ~a" filename))
-        (let* ((layer-count (gdal-dataset-get-layer-count ds))
-               (land-polygons (gdal-dataset-get-layer ds 0)))
-          (unless (eql layer-count 1)
-            (error "Unexpected layer count ~a" layer-count))
-          (cond
-            ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
-             ;; Succeed only if we have an index
-             (log2:info "Loaded layer ~a with ~a features"
-                        (ogr-l-get-name land-polygons)
-                        (ogr-l-get-feature-count land-polygons))
-             (setf *map* (make-mapp :data land-polygons :land-inverted inverted)))
-            (t
-             (error "Layer not found or no index"))))))))
+    (let ((map 
+            (load-map filename)))
+      (setf *map* map))))
+
+(defun load-map (filename)
+  (bordeaux-threads:with-lock-held (+map-lock+)
+    (log2:info "Loading shapefile ~a" filename)
+    (gdal-all-register)
+    (let ((ds (gdal-open-ex filename
+                            GDAL_OF_VECTOR
+                            (cffi:null-pointer)
+                            (cffi:null-pointer)
+                            (cffi:null-pointer))))
+      (when (null-pointer-p ds)
+        (error "Failed to open ~a" filename))
+      (let* ((layer-count (gdal-dataset-get-layer-count ds))
+             (polygons (gdal-dataset-get-layer ds 0)))
+        (unless (eql layer-count 1)
+          (error "Unexpected layer count ~a" layer-count))
+        (cond
+          ((< 0 (ogr-l-test-capability polygons OLCFastSpatialFilter))
+           ;; Succeed only if we have an index
+           (log2:info "Loaded layer ~a with ~a features"
+                      (ogr-l-get-name polygons)
+                      (ogr-l-get-feature-count polygons))
+           (values (make-mapp :polygons polygons
+                             :filename filename)))
+          (t
+           (error "Layer not found or no index")))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IS-LAND
 ;;  Return TRUE iff point is on land
 
-(defun is-land (point &key (map *map*))
-  (let ((ogr-point (ogr-g-create-geometry wkbPoint))
-        (mapdata (mapp-data map)))
-    (let ((lat (latlng-lat point))
+
+(let ((ogr-point (ogr-g-create-geometry wkbPoint)))
+
+  (defun is-land (point &key (map *map*))
+    (let ((mapdata (mapp-polygons map))
+          (lat (latlng-lat point))
           (lon (latlng-lng point)))
       (bordeaux-threads:with-lock-held (+map-lock+)
         (ogr-g-set-point-2d ogr-point 0 lon lat)
@@ -88,39 +99,36 @@
                       (found (ogr-g-contains polygon ogr-point)))
                  (ogr-f-destroy feature)
                  (when found
-                   (ogr-f-destroy ogr-point)
-                   (return-from is-land (not (mapp-land-inverted map))))))))
-    (ogr-f-destroy ogr-point))
-  (return-from is-land (mapp-land-inverted map)))
+                   (return-from is-land t))))))
+    (return-from is-land nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; LINE-INTERSECTS-LAND-P
 
+(defparameter +segment+ (ogr-g-create-geometry wkbLineString))
+(eval-when (:execute)
+  (ogr-g-add-point-2d +segment+ 0d0 0d0)
+  (ogr-g-add-point-2d +segment+ 0d0 0d0))
+
 (declaim (inline line-intersects-land-p))
 (defun line-intersects-land-p (start end &key (map *map*))
-  (let ((segment (ogr-g-create-geometry wkbLineString))
-        (mapdata (mapp-data map)))
-    (ogr-g-add-point-2d segment 0d0 0d0)
-    (ogr-g-add-point-2d segment 0d0 0d0)
+  (let ((mapdata (mapp-polygons map)))
     (bordeaux-threads:with-lock-held (+map-lock+)
-      (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
-      (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
-      (ogr-l-set-spatial-filter mapdata segment)
+        (ogr-g-set-point-2d +segment+ 0 (latlng-lng start) (latlng-lat start))
+        (ogr-g-set-point-2d +segment+ 1 (latlng-lng end) (latlng-lat end))
+      (ogr-l-set-spatial-filter mapdata +segment+)
       (ogr-l-reset-reading mapdata)
       ;; setSpatialFilter may return too many features. Scanning the result may be necessary.
       ;; See http://www.gdal.org/ogr__api_8h.html#a678d1735bc82533614ac005691d1138c
       (loop
-         :for feature = (ogr-l-get-next-feature mapdata)
-         :while (not (null-pointer-p feature))
-         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
-                    (found (ogr-g-intersects polygon segment)))
-               (ogr-f-destroy feature)
-               (when found
-                 (ogr-f-destroy segment)
-                 (return-from line-intersects-land-p
-                   (not (mapp-land-inverted map)))))))
-    (ogr-f-destroy segment))
-  (return-from line-intersects-land-p (mapp-land-inverted map)))
+        :for feature = (ogr-l-get-next-feature mapdata)
+        :while (not (null-pointer-p feature))
+        :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                   (found (ogr-g-intersects polygon +segment+)))
+              (ogr-f-destroy feature)
+              (when found
+                (return-from line-intersects-land-p t))))))
+  (return-from line-intersects-land-p nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; RECTANGLE-INTERSECTS-LAND-P
@@ -128,7 +136,7 @@
 (defun rectangle-intersects-land-p (lat-nw lng-nw lat-se lng-se &key (map *map*))
   (let ((segment (ogr-g-create-geometry wkbLinearRing))
         (poly (ogr-g-create-geometry wkbPolygon))
-        (mapdata (mapp-data map)))
+        (mapdata (mapp-polygons map)))
     (ogr-g-add-point-2d segment lng-nw lat-nw)
     (ogr-g-add-point-2d segment lng-se lat-nw)
     (ogr-g-add-point-2d segment lng-se lat-se)
@@ -159,7 +167,7 @@
 
 (defun line-land-intersection (start end &key (map *map*))
   (let ((segment (ogr-g-create-geometry wkbLineString))
-        (mapdata (mapp-data map)))
+        (mapdata (mapp-polygons map)))
     (ogr-g-add-point-2d segment 0d0 0d0)
     (ogr-g-add-point-2d segment 0d0 0d0)
     ;; Check if and where a line intersects land. The start point should be on
