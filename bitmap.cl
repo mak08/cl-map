@@ -1,12 +1,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2025-10-12 23:19:46>
+;;; Last Modified <michael 2025-10-14 23:32:20>
 
 (in-package :cl-map)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Creating bitmaps
+
+
+(defvar *water-polygons*
+  (load-map "/home/michael/Maps/water-polygons/water-polygons-split-4326/water_polygons.shx"))
 
 (defparameter *bitmap-file* "/home/michael/Maps/bm-tiled-5400.dat")
 (defvar *bitmap* nil)
@@ -44,12 +48,12 @@
         (lon-index (truncate (+ (latlng-lng latlng) 180d0)
                              (bitmap-dlon% bitmap))))
     (eql 1
-         (aref (bitmap-polygons bitmap) lat-index lon-index))))
+         (aref (bitmap-data bitmap) lat-index lon-index))))
 
 (declaim (inline test-rectangle))
-(defun test-rectangle (lat-nw lng-nw lat-se lng-se)
+(defun test-rectangle (lat-nw lng-nw lat-se lng-se &key (map *map*))
   (declare (double-float lat-nw lng-nw lat-se lng-se))
-  (let ((vectormap (mapp-polygons *map*))
+  (let ((vectormap (mapp-polygons map))
         (segment (ogr-g-create-geometry wkbLinearRing))
         (poly (ogr-g-create-geometry wkbPolygon)))
     (ogr-g-add-point-2d segment lng-nw lat-nw)
@@ -143,7 +147,7 @@
         (bitmap (make-array (list latpoints lonpoints) :element-type 'bit)))
     (log2:info "Probing ~a ~a ~a ~a" lat-north lat-south lon-west lon-east)
 
-    ;; (log2:trace "dlat=~a dlon=~a" dlat dlon)
+    (log2:trace "dlat=~a dlon=~a" dlat dlon)
     ;; (loop
     ;;   :for lat :from (- lat-north dlat) :downto lat-south :by dlat
     ;;   :for lat-index :from 0
@@ -160,12 +164,15 @@
 
 (defun generate-tiles (&key (height 1) (width 1) (resolution 120))
   (let* ((directory (format nil "~a_~a_~a" height width resolution))
-         (latpoints (* height resolution))
-         (lonpoints (* width resolution))
+         (latpoints (floor (* height resolution)))
+         (lonpoints (floor (* width resolution)))
          (lat-north 90d0)
          (lat-south -90d0)
          (lon-west -180d0)
-         (lon-east 180d0))
+         (lon-east 180d0)
+         (land-tiles 0)
+         (water-tiles 0)
+         (probed-tiles 0))
     (ensure-directories-exist (format nil "~a/" directory))
     (log2:info "Writing ~a*~a tiles" (/ 180 height) (/ 360 width))
     (loop
@@ -176,24 +183,29 @@
             :for lon1 = (- lon width)
             :do (cond
                   ((null (test-rectangle lat lon lat1 lon1))
+                   (incf water-tiles)
                    (write-water-tile lat lon lat1 lon1))
-                  ((land-tile-p  lat lon lat1 lon1)
+                  ((null (test-rectangle lat lon lat1 lon1 :map *water-polygons*))
+                   (incf land-tiles)
                    (write-land-tile lat lon lat1 lon1))
                   (t
+                   (incf probed-tiles)
                    (let ((tile (probe-tile :latpoints latpoints
                                            :lonpoints lonpoints
                                            :lat-north lat
                                            :lat-south lat1
                                            :lon-east lon
                                            :lon-west lon1)))
-                     (write-bitmap-file tile (tile-path directory lat lon)))))))))
+                     (write-bitmap-file tile (tile-path directory lat lon)))))))
+    (format t "Water  tiles: ~a~%Land   tiles: ~a~%Probed tiles: ~a~%Total: ~a~%"
+            water-tiles land-tiles probed-tiles
+            (+ water-tiles land-tiles probed-tiles))))
 
 (defun tile-path (directory north east)
   (make-pathname :directory `(:relative ,directory) :name (format nil "~f_~f" north east) :type "dat"))
 
 (defun write-land-tile (lat0 lon0 lat1 lon1)
-  (let ((land-tile (land-tile-p  lat0 lon0 lat1 lon1)))
-    (log2:info "Land tile: ~a ~a ~a ~a ==> ~a" lat0 lon0 lat1 lon1 (vecmap-name land-tile))))
+  (log2:info "Land tile: ~a ~a ~a ~a" lat0 lon0 lat1 lon1))
 
 (defun write-water-tile (lat0 lon0 lat1 lon1)
   (log2:info "Water tile: ~a ~a ~a ~a" lat0 lon0 lat1 lon1))
