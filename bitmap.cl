@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2020
-;;; Last Modified <michael 2025-10-14 23:32:20>
+;;; Last Modified <michael 2025-11-02 11:12:44>
 
 (in-package :cl-map)
 
@@ -9,8 +9,9 @@
 ;;; Creating bitmaps
 
 
-(defvar *water-polygons*
-  (load-map "/home/michael/Maps/water-polygons/water-polygons-split-4326/water_polygons.shx"))
+(defvar *water-polygons* nil
+  ;; (load-map "/home/michael/Maps/water-polygons/water-polygons-split-4326/water_polygons.shx")
+  )
 
 (defparameter *bitmap-file* "/home/michael/Maps/bm-tiled-5400.dat")
 (defvar *bitmap* nil)
