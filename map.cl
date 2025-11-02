@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-10-11 23:00:39>
+;;; Last Modified <michael 2025-11-02 13:07:33>
 
 (in-package :cl-map)
 
@@ -82,12 +82,13 @@
 ;;  Return TRUE iff point is on land
 
 
-(let ((ogr-point (ogr-g-create-geometry wkbPoint)))
+(let ((cached-ogr-point (ogr-g-create-geometry wkbPoint)))
 
   (defun is-land (point &key (map *map*))
     (let ((mapdata (mapp-polygons map))
           (lat (latlng-lat point))
-          (lon (latlng-lng point)))
+          (lon (latlng-lng point))
+          (ogr-point  (ogr-g-create-geometry wkbPoint)))
       (bordeaux-threads:with-lock-held (+map-lock+)
         (ogr-g-set-point-2d ogr-point 0 lon lat)
         (ogr-l-set-spatial-filter mapdata ogr-point)
@@ -98,6 +99,7 @@
            :do (let* ((polygon (ogr-f-get-geometry-ref feature))
                       (found (ogr-g-contains polygon ogr-point)))
                  (ogr-f-destroy feature)
+                 (ogr-f-destroy ogr-point)
                  (when found
                    (return-from is-land t))))))
     (return-from is-land nil)))
