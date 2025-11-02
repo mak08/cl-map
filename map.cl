@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-02 13:07:33>
+;;; Last Modified <michael 2025-11-02 16:43:48>
 
 (in-package :cl-map)
 
@@ -107,18 +107,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; LINE-INTERSECTS-LAND-P
 
-(defparameter +segment+ (ogr-g-create-geometry wkbLineString))
+(defparameter +cached-segment+ (ogr-g-create-geometry wkbLineString))
 (eval-when (:execute)
-  (ogr-g-add-point-2d +segment+ 0d0 0d0)
-  (ogr-g-add-point-2d +segment+ 0d0 0d0))
+  (ogr-g-add-point-2d +cached-segment+ 0d0 0d0)
+  (ogr-g-add-point-2d +cached-segment+ 0d0 0d0))
 
 (declaim (inline line-intersects-land-p))
 (defun line-intersects-land-p (start end &key (map *map*))
-  (let ((mapdata (mapp-polygons map)))
+  (let ((mapdata (mapp-polygons map))
+        (segment (ogr-g-create-geometry wkbLineString)))
     (bordeaux-threads:with-lock-held (+map-lock+)
-        (ogr-g-set-point-2d +segment+ 0 (latlng-lng start) (latlng-lat start))
-        (ogr-g-set-point-2d +segment+ 1 (latlng-lng end) (latlng-lat end))
-      (ogr-l-set-spatial-filter mapdata +segment+)
+        (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
+        (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
+      (ogr-l-set-spatial-filter mapdata segment)
       (ogr-l-reset-reading mapdata)
       ;; setSpatialFilter may return too many features. Scanning the result may be necessary.
       ;; See http://www.gdal.org/ogr__api_8h.html#a678d1735bc82533614ac005691d1138c
@@ -126,7 +127,8 @@
         :for feature = (ogr-l-get-next-feature mapdata)
         :while (not (null-pointer-p feature))
         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
-                   (found (ogr-g-intersects polygon +segment+)))
+                   (found (ogr-g-intersects polygon segment)))
+              (ogr-f-destroy segment)
               (ogr-f-destroy feature)
               (when found
                 (return-from line-intersects-land-p t))))))
