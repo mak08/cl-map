@@ -17,7 +17,7 @@
                           (assert (<= (getf s :entries) *prepared-cache-max-entries*)))))
       (unwind-protect
            (progn
-             (assert (= (* 1000 1024 1024) *prepared-cache-max-bytes*))
+             (assert (= (* 2000 1024 1024) *prepared-cache-max-bytes*))
              (let ((*prepared-cache-enabled* nil)) (setf reference (mapcar #'check cases)))
              (assert (equal (subseq reference 0 10) '(t t nil t t nil nil t t nil)))
              (compare) (compare) (budget)

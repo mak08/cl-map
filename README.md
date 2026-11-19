@@ -36,7 +36,7 @@ Lisp error rather than entering native code with a stale handle.
 
 ## Prepared cache
 
-The default enabled cache has a **1000 MiB global accounting budget**, shared
+The default enabled cache has a **2000 MiB global accounting budget**, shared
 across open maps. It is lazy: this is an allowance, not an upfront allocation.
 The default spatial candidate cells are 0.25°. They store feature IDs, while
 one globally managed LRU owns prepared polygon geometries. Feature eviction
@@ -47,7 +47,7 @@ Configuration, set before serving requests or in application configuration:
 | Parameter | Default | Meaning |
 | --- | ---: | --- |
 | `*prepared-cache-enabled*` | `t` | Enable prepared predicates |
-| `*prepared-cache-max-bytes*` | `1048576000` | Global conservative geometry charge, bytes |
+| `*prepared-cache-max-bytes*` | `2097152000` | Global conservative geometry charge, bytes |
 | `*prepared-cache-max-entries*` | `50000` | Global feature/negative-entry limit |
 | `*prepared-cache-cell-size*` | `0.25d0` | Candidate-cell width in degrees |
 | `*prepared-cache-tile-bytes*` | `33554432` | Per-map candidate-index charge, bytes |

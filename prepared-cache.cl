@@ -2,7 +2,7 @@
 (in-package :cl-map)
 
 (defparameter *prepared-cache-enabled* t "Use cached exact prepared polygon predicates.")
-(defparameter *prepared-cache-max-bytes* (* 1000 1024 1024)
+(defparameter *prepared-cache-max-bytes* (* 2000 1024 1024)
   "Global conservative native-memory accounting budget across open maps, bytes.
 Charged as 16 times WKB size plus 4096 bytes per feature; not a measured RSS cap.")
 (defparameter *prepared-cache-max-entries* 50000 "Global prepared-feature/negative-entry limit.")
