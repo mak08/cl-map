@@ -164,5 +164,27 @@
   (type :uint))
 
 
+(defcfun ("OGR_L_SetSpatialFilterRect" ogr-l-set-spatial-filter-rect) :void
+  (layer :pointer) (min-x :double) (min-y :double) (max-x :double) (max-y :double))
+(defcfun ("OGR_L_GetFeature" ogr-l-get-feature) :pointer (layer :pointer) (fid :int64))
+(defcfun ("OGR_F_GetFID" ogr-f-get-fid) :int64 (feature :pointer))
+(defcfun ("OGR_G_Clone" ogr-g-clone) :pointer (geometry :pointer))
+(defcfun ("OGR_G_WkbSize" ogr-g-wkb-size) :int (geometry :pointer))
+(defcfun ("OGRHasPreparedGeometrySupport" ogr-has-prepared-geometry-support) :int)
+(defcfun ("OGRCreatePreparedGeometry" ogr-create-prepared-geometry) :pointer (geometry :pointer))
+(defcfun ("OGRDestroyPreparedGeometry" ogr-destroy-prepared-geometry) :void (geometry :pointer))
+(defcfun ("OGRPreparedGeometryIntersects" ogr-prepared-geometry-intersects) :int
+  (prepared :pointer) (geometry :pointer))
+(defcfun ("OGRPreparedGeometryContains" ogr-prepared-geometry-contains) :int
+  (prepared :pointer) (geometry :pointer))
+(defcfun ("CPLErrorReset" cpl-error-reset) :void)
+(defcfun ("CPLGetLastErrorType" cpl-get-last-error-type) :int)
+(defcfun ("CPLGetLastErrorMsg" cpl-get-last-error-msg) :string)
+
+(defun check-map-error (operation)
+  "Never turn a GDAL failure into a successful water/clearance result."
+  (when (>= (cpl-get-last-error-type) 3)
+    (error "GDAL error while ~a: ~a" operation (cpl-get-last-error-msg))))
+
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

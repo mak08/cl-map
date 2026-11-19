@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Foreign libraries
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-09 23:38:11>
+;;; Last Modified <michael 2025-12-01 22:45:11>
 
 (in-package :cl-map)
 
